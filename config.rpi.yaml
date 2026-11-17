@@ -1,0 +1,132 @@
+# SafeStep: Raspberry Pi 4 Model B (4GB RAM) Deployment Configuration (Profile: rpi)
+# Used automatically on Raspberry Pi hardware or when SAFESTEP_ENV=rpi.
+# Hardware Spec:
+# - Raspberry Pi 4 Model B (4GB RAM)
+# - Raspberry Pi Camera Module connected through CSI (Picamera2 / libcamera)
+# - HC-SR04 Ultrasonic Sensor: GPIO23 (TRIG), GPIO24 (ECHO via 1kΩ/2kΩ voltage divider)
+# - Earphones or USB Audio Output (ALSA / PulseAudio / PipeWire + espeak-ng)
+
+profile: "raspberry_pi_4_deployment"
+
+project:
+  name: "SafeStep"
+  version: "1.1.0"
+  description: "AI-Enabled Smart Navigation System for the Visually Impaired (Raspberry Pi 4 Deployment Profile)"
+  safety_disclaimer: >
+    IMPORTANT SAFETY NOTICE: SafeStep is an assistive research prototype and is NOT a certified
+    medical device or a replacement for a white cane, guide dog, or professional orientation and
+    mobility (O&M) training. Do not rely solely on SafeStep predictions when navigating roads,
+    stairs, traffic, or hazardous environments.
+
+camera:
+  backend: "picamera2"  # Uses Picamera2 CSI driver first, with libcamera/V4L2 fallback
+  source: 0
+  width: 640
+  height: 480
+  fps_target: 15
+  csi_format: "RGB888"
+  fallback_to_synthetic_stream: false  # On physical RPi deployment, report real CSI camera status
+
+models:
+  pretrained_dir: "models/pretrained"
+  base_yolo_weights: "yolov8n.pt"
+  prefer_onnx_runtime: true  # Use lightweight ONNX Runtime (INT8/FP32) on Raspberry Pi 4 CPU
+  ort_intra_op_threads: 4    # Cortex-A72 quad-core optimization
+  object_detection:
+    weights_path: "models/object_detection/best.pt"
+    onnx_path: "models/object_detection/best.onnx"
+    int8_onnx_path: "models/object_detection/best_rpi_int8.onnx"
+    data_yaml: "datasets/object_detection/data.yaml"
+    confidence_threshold: 0.40
+    iou_threshold: 0.45
+    img_size: 320  # 320x320 input resolution for fast real-time inference on RPi 4 (4GB)
+    classes:
+      0: "Person"
+      1: "Car"
+      2: "Motorcycle"
+      3: "Bicycle"
+      4: "Bus"
+      5: "Truck"
+      6: "Pole"
+      7: "Wall"
+      8: "Chair"
+      9: "Table"
+      10: "Door"
+      11: "Other obstacles"
+    hazard_priority_classes:
+      - "Person"
+      - "Car"
+      - "Motorcycle"
+      - "Bicycle"
+      - "Bus"
+      - "Truck"
+      - "Pole"
+      - "Other obstacles"
+  currency_detection:
+    weights_path: "models/currency_detection/best.pt"
+    onnx_path: "models/currency_detection/best.onnx"
+    int8_onnx_path: "models/currency_detection/best_rpi_int8.onnx"
+    data_yaml: "datasets/currency_detection/data.yaml"
+    confidence_threshold: 0.45
+    iou_threshold: 0.45
+    img_size: 320
+    classes:
+      0: "10_rupees"
+      1: "20_rupees"
+      2: "50_rupees"
+      3: "100_rupees"
+      4: "200_rupees"
+      5: "500_rupees"
+    denomination_map:
+      "10_rupees": 10
+      "20_rupees": 20
+      "50_rupees": 50
+      "100_rupees": 100
+      "200_rupees": 200
+      "500_rupees": 500
+    spoken_map:
+      10: "Ten rupees"
+      20: "Twenty rupees"
+      50: "Fifty rupees"
+      100: "One hundred rupees"
+      200: "Two hundred rupees"
+      500: "Five hundred rupees"
+    authenticity_disclaimer: >
+      Note: Visual currency detection classifies only the apparent denomination of Indian banknotes
+      and does NOT verify legal authenticity or counterfeit security features.
+
+ocr:
+  languages: ["en"]
+  gpu: false
+  confidence_threshold: 0.45
+  min_text_length: 2
+  auto_interval_seconds: 6.0  # Slightly longer interval on RPi 4 to preserve CPU thermal headroom
+  deduplication_window_seconds: 15.0
+
+distance_sensor:
+  enabled: true
+  mode: "hardware"  # Physical HC-SR04 on GPIO23 (TRIG) & GPIO24 (ECHO via 1k/2k divider)
+  trigger_pin: 23
+  echo_pin: 24
+  voltage_divider_ohms: "1k_2k_to_3v3"
+  poll_rate_hz: 10.0
+  moving_average_window: 5
+  safety_threshold_meters: 2.0
+  critical_threshold_meters: 1.0
+  timeout_seconds: 0.04
+
+audio:
+  enabled: true
+  backend: "espeak_alsa"
+  output_device: "headphones_or_usb_audio"
+  rate: 165
+  volume: 0.95
+  cooldown_seconds: 4.0
+  urgent_cooldown_seconds: 2.0
+  max_queue_size: 10
+
+navigation:
+  object_detection_interval_frames: 1
+  currency_detection_interval_seconds: 4.0
+  ocr_interval_seconds: 6.0
+  track_persistence_frames: 12

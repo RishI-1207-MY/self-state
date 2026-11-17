@@ -1,0 +1,18 @@
+path: C:/Users/rishi/OneDrive/Desktop/v2/SafeStep/datasets/object_detection
+train: images/train
+val: images/val
+test: images/test
+nc: 12
+names:
+  0: Person
+  1: Car
+  2: Motorcycle
+  3: Bicycle
+  4: Bus
+  5: Truck
+  6: Pole
+  7: Wall
+  8: Chair
+  9: Table
+  10: Door
+  11: Other obstacles

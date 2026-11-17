@@ -1,0 +1,13 @@
+{
+  "component": "Raspberry Pi Camera Module (CSI / Picamera2)",
+  "status": "PENDING_PHYSICAL_PI_EXECUTION",
+  "is_simulated": false,
+  "reason": "Executed on development laptop (non-Raspberry Pi host). Run this script on Raspberry Pi 4 after connecting the CSI ribbon cable.",
+  "diagnostics": {
+    "is_raspberry_pi": false,
+    "picamera2_installed": false,
+    "libcamera_cli_path": null,
+    "detected_csi_cameras": [],
+    "csi_hardware_ready": false
+  }
+}

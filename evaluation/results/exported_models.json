@@ -1,0 +1,18 @@
+{
+  "object_detection": {
+    "source_pt": "C:\\Users\\rishi\\OneDrive\\Desktop\\v2\\SafeStep\\models\\object_detection\\best.pt",
+    "onnx_path": "C:\\Users\\rishi\\OneDrive\\Desktop\\v2\\SafeStep\\models\\object_detection\\best.onnx",
+    "onnx_exists": true,
+    "onnx_verified_ort": true,
+    "onnx_size_mb": 12.05,
+    "tflite_status": "skipped (TensorFlow not installed in lightweight CPU environment)"
+  },
+  "currency_detection": {
+    "source_pt": "C:\\Users\\rishi\\OneDrive\\Desktop\\v2\\SafeStep\\models\\currency_detection\\best.pt",
+    "onnx_path": "C:\\Users\\rishi\\OneDrive\\Desktop\\v2\\SafeStep\\models\\currency_detection\\best.onnx",
+    "onnx_exists": true,
+    "onnx_verified_ort": true,
+    "onnx_size_mb": 12.04,
+    "tflite_status": "skipped (TensorFlow not installed in lightweight CPU environment)"
+  }
+}

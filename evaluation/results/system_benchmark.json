@@ -1,0 +1,28 @@
+{
+  "system_latency_and_resources": {
+    "avg_object_inference_ms": 32.87,
+    "avg_currency_inference_ms": 55.72,
+    "avg_ocr_inference_ms": 944.81,
+    "avg_end_to_end_frame_ms": 237.81,
+    "integrated_effective_fps": 4.21,
+    "object_only_fps": 51.98,
+    "avg_audio_dispatch_latency_ms": 0.09,
+    "avg_cpu_usage_percent": 14.7,
+    "avg_process_ram_mb": 708.6,
+    "power_consumption_measurement": "Hardware power meter not attached on Windows laptop (N/A)"
+  },
+  "mobilenet_ssd_comparison": {
+    "mobilenet_v3_ssd_inference_ms": 55.96,
+    "mobilenet_v3_ssd_fps": 17.87,
+    "custom_yolov8n_inference_ms": 19.24,
+    "custom_yolov8n_fps": 51.98
+  },
+  "environmental_conditions_mean_confidence": {
+    "indoor": 0.8633,
+    "outdoor": 0.912,
+    "low_light": 0.8634,
+    "bright": 0.9095,
+    "crowded_scene": 0.9273,
+    "occluded": 0.877
+  }
+}

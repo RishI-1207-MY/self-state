@@ -1,0 +1,56 @@
+2026-11-17 19:00:17 | INFO     | SafeStep.DatasetGen.Object | Generated 750 base object detection images (5 webcam-assisted, 745 programmatic synthetic) at C:\Users\rishi\OneDrive\Desktop\v2\SafeStep\datasets\object_detection
+2026-11-17 19:00:32 | INFO     | SafeStep.DatasetGen.Currency | Generated 860 base Indian currency images (synthetic specimen notes) at C:\Users\rishi\OneDrive\Desktop\v2\SafeStep\datasets\currency_detection
+2026-11-17 19:00:34 | INFO     | SafeStep.DatasetGen.Split | Split dataset at object_detection by session_id -> train=536, val=144, test=70 (total=750)
+2026-11-17 19:00:36 | INFO     | SafeStep.DatasetGen.Split | Split dataset at currency_detection by session_id -> train=600, val=170, test=90 (total=860)
+2026-11-17 19:00:58 | INFO     | SafeStep.DatasetGen.Augment | Augmented dataset object_detection -> added train=1072, val=288, test=140 (total images now=2250)
+2026-11-17 19:01:19 | INFO     | SafeStep.DatasetGen.Augment | Augmented dataset currency_detection -> added train=1200, val=340, test=180 (total images now=2580)
+2026-11-17 19:01:34 | INFO     | SafeStep.DatasetGen.Validate | Validated object_detection: 2250 usable images, 6613 bboxes, status=PASSED
+2026-11-17 19:01:47 | INFO     | SafeStep.DatasetGen.Validate | Validated currency_detection: 2580 usable images, 3432 bboxes, status=PASSED
+2026-11-17 19:08:23 | INFO     | SafeStep.Train.Object | Starting Object Detection YOLO training: epochs=3, batch=32, imgsz=320, device=cpu
+2026-11-17 19:16:58 | INFO     | SafeStep.Train.Object | Object detection model training completed in 513.4s -> C:\Users\rishi\OneDrive\Desktop\v2\SafeStep\models\object_detection\best.pt
+2026-11-17 19:17:07 | INFO     | SafeStep.Train.Currency | Starting Indian Currency Detection YOLO training: epochs=3, batch=32, imgsz=320, device=cpu
+2026-11-17 19:23:38 | INFO     | SafeStep.Train.Currency | Currency detection model training completed in 390.4s -> C:\Users\rishi\OneDrive\Desktop\v2\SafeStep\models\currency_detection\best.pt
+2026-11-17 19:23:50 | INFO     | SafeStep.Eval.Object | Object model evaluation complete: P=0.9193, R=0.8617, mAP@50=0.9393, mAP@50-95=0.7807, FPS=52.0
+2026-11-17 19:24:02 | INFO     | SafeStep.Eval.Currency | Currency model evaluation complete: P=0.8672, R=0.8964, mAP@50=0.9148, mAP@50-95=0.7157, FPS=49.1
+2026-11-17 19:24:05 | INFO     | SafeStep.Export | Exported best.pt -> ONNX verified=True
+2026-11-17 19:24:05 | INFO     | SafeStep.Export | Exported best.pt -> ONNX verified=True
+2026-11-17 19:25:07 | INFO     | SafeStep.CurrencyDetection | Loaded custom Indian currency detection model: C:\Users\rishi\OneDrive\Desktop\v2\SafeStep\models\currency_detection\best.pt
+2026-11-17 19:25:07 | INFO     | SafeStep.CurrencyDetection | Loaded custom Indian currency detection model: C:\Users\rishi\OneDrive\Desktop\v2\SafeStep\models\currency_detection\best.pt
+2026-11-17 19:25:09 | INFO     | SafeStep.ObjectDetection | Loaded custom SafeStep object detection model: C:\Users\rishi\OneDrive\Desktop\v2\SafeStep\models\object_detection\best.pt
+2026-11-17 19:34:01 | INFO     | SafeStep.OCR | Initialized EasyOCR Reader for languages: ['en']
+2026-11-17 19:34:04 | INFO     | SafeStep.ObjectDetection | Loaded custom SafeStep object detection model: C:\Users\rishi\OneDrive\Desktop\v2\SafeStep\models\object_detection\best.pt
+2026-11-17 19:34:04 | INFO     | SafeStep.CurrencyDetection | Loaded custom Indian currency detection model: C:\Users\rishi\OneDrive\Desktop\v2\SafeStep\models\currency_detection\best.pt
+2026-11-17 19:34:06 | INFO     | SafeStep.OCR | Initialized EasyOCR Reader for languages: ['en']
+2026-11-17 19:34:35 | INFO     | SafeStep.ObjectDetection | Loaded MobileNetV3-SSD comparison model.
+2026-11-17 19:34:35 | INFO     | SafeStep.SystemEval | Saved full experimental evaluation report to C:\Users\rishi\OneDrive\Desktop\v2\SafeStep\evaluation\reports\experimental_evaluation_report.md
+2026-11-17 19:41:29 | INFO     | SafeStep.ObjectDetection | Loaded custom SafeStep object detection model: C:\Users\rishi\OneDrive\Desktop\v2\SafeStep\models\object_detection\best.pt
+2026-11-17 19:41:29 | INFO     | SafeStep.CurrencyDetection | Loaded custom Indian currency detection model: C:\Users\rishi\OneDrive\Desktop\v2\SafeStep\models\currency_detection\best.pt
+2026-11-17 19:42:40 | INFO     | SafeStep.Camera | Camera source 0 opened successfully (640x480).
+2026-11-17 19:42:45 | INFO     | SafeStep.OCR | Initialized EasyOCR Reader for languages: ['en']
+2026-11-17 19:43:55 | INFO     | SafeStep.Camera | Camera source 0 opened successfully (640x480).
+2026-11-17 21:41:43 | INFO     | SafeStep.OptimizeRPi | Optimized safestep_object_yolov8n for RPi 4: FP32=12.05MB (13.35ms), INT8=3.19MB (verified=True)
+2026-11-17 21:41:45 | INFO     | SafeStep.OptimizeRPi | Optimized safestep_currency_yolov8n for RPi 4: FP32=12.04MB (25.54ms), INT8=3.19MB (verified=True)
+2026-11-17 21:41:46 | INFO     | SafeStep.HWTest.Picamera2 | Picamera2 Hardware Test Status: PENDING_PHYSICAL_PI_EXECUTION (Currently on Windows laptop).
+2026-11-17 21:41:47 | INFO     | SafeStep.HWTest.HCSR04 | HC-SR04 Hardware Test Status: PENDING_PHYSICAL_PI_EXECUTION (No physical RPi GPIO on laptop).
+2026-11-17 21:41:48 | WARNING  | SafeStep.Audio | pyttsx3 audio driver unavailable or headless ((-2147200967, None, (None, None, None, 0, None))). Using logged silent TTS fallback.
+2026-11-17 21:41:48 | INFO     | SafeStep.HWTest.Audio | Audio Hardware Test Status: LAPTOP_AUDIO_VERIFIED_PENDING_PI_EARPHONES_TEST
+2026-11-17 21:41:53 | INFO     | SafeStep.Deploy | Created Raspberry Pi deployment bundle: C:\Users\rishi\OneDrive\Desktop\v2\SafeStep\deployment\safestep_rpi_bundle.tar.gz (49.13 MB)
+2026-11-17 21:41:53 | INFO     | SafeStep.Deploy | Dry-run / bundle-only mode completed. Ready to transfer when Raspberry Pi is online.
+2026-11-17 21:41:56 | WARNING  | SafeStep.Audio | pyttsx3 audio driver unavailable or headless ((-2147200967, None, (None, None, None, 0, None))). Using logged silent TTS fallback.
+2026-11-17 21:41:56 | WARNING  | SafeStep.Audio | pyttsx3 audio driver unavailable or headless ((-2147200967, None, (None, None, None, 0, None))). Using logged silent TTS fallback.
+2026-11-17 21:42:05 | INFO     | SafeStep.CurrencyDetection | Loaded custom Indian currency detection model: C:\Users\rishi\OneDrive\Desktop\v2\SafeStep\models\currency_detection\best.pt
+2026-11-17 21:42:05 | INFO     | SafeStep.CurrencyDetection | Loaded custom Indian currency detection model: C:\Users\rishi\OneDrive\Desktop\v2\SafeStep\models\currency_detection\best.pt
+2026-11-17 21:42:12 | INFO     | SafeStep.ObjectDetection | Loaded custom SafeStep object detection model: C:\Users\rishi\OneDrive\Desktop\v2\SafeStep\models\object_detection\best.pt
+2026-11-17 21:42:14 | ERROR    | SafeStep.OCR | EasyOCR initialization failed: [Errno 13] Permission denied: 'C:\\Users\\rishi/.EasyOCR//model\\craft_mlt_25k.pth'
+2026-11-17 21:48:53 | WARNING  | SafeStep.Audio | pyttsx3 audio driver unavailable or headless ((-2147200967, None, (None, None, None, 0, None))). Using logged silent TTS fallback.
+2026-11-17 21:48:53 | WARNING  | SafeStep.Audio | pyttsx3 audio driver unavailable or headless ((-2147200967, None, (None, None, None, 0, None))). Using logged silent TTS fallback.
+2026-11-17 21:49:01 | INFO     | SafeStep.CurrencyDetection | Loaded custom Indian currency detection model: C:\Users\rishi\OneDrive\Desktop\v2\SafeStep\models\currency_detection\best.pt
+2026-11-17 21:49:01 | INFO     | SafeStep.CurrencyDetection | Loaded custom Indian currency detection model: C:\Users\rishi\OneDrive\Desktop\v2\SafeStep\models\currency_detection\best.pt
+2026-11-17 21:49:09 | INFO     | SafeStep.HWTest.Picamera2 | Picamera2 Hardware Test Status: PENDING_PHYSICAL_PI_EXECUTION (Currently on Windows laptop).
+2026-11-17 21:49:09 | INFO     | SafeStep.HWTest.HCSR04 | HC-SR04 Hardware Test Status: PENDING_PHYSICAL_PI_EXECUTION (No physical RPi GPIO on laptop).
+2026-11-17 21:49:10 | WARNING  | SafeStep.Audio | pyttsx3 audio driver unavailable or headless ((-2147200967, None, (None, None, None, 0, None))). Using logged silent TTS fallback.
+2026-11-17 21:49:10 | INFO     | SafeStep.HWTest.Audio | Audio Hardware Test Status: LAPTOP_AUDIO_VERIFIED_PENDING_PI_EARPHONES_TEST
+2026-11-17 21:49:10 | INFO     | SafeStep.HWTest.HCSR04 | HC-SR04 Test completed with status=SIMULATION_VERIFIED_PENDING_PI_HARDWARE (is_simulated=True)
+2026-11-17 21:49:10 | INFO     | SafeStep.ObjectDetection | Loaded custom SafeStep object detection model: C:\Users\rishi\OneDrive\Desktop\v2\SafeStep\models\object_detection\best.pt
+2026-11-17 21:49:12 | ERROR    | SafeStep.OCR | EasyOCR initialization failed: <urlopen error [Errno 11001] getaddrinfo failed>
+2026-11-17 21:49:13 | INFO     | SafeStep.HWTest.HCSR04 | HC-SR04 Hardware Test Status: PENDING_PHYSICAL_PI_EXECUTION (No physical RPi GPIO on laptop).

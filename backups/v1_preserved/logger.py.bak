@@ -1,0 +1,59 @@
+"""Centralized logging and configuration loader for SafeStep."""
+
+import logging
+import os
+import sys
+from pathlib import Path
+from typing import Any, Dict
+import yaml
+
+
+def get_project_root() -> Path:
+    """Return the root directory of the SafeStep project."""
+    return Path(__file__).resolve().parent.parent
+
+
+def load_config(config_path: str | Path | None = None) -> Dict[str, Any]:
+    """Load the YAML configuration file."""
+    root = get_project_root()
+    path = Path(config_path) if config_path else root / "config.yaml"
+    if not path.exists():
+        raise FileNotFoundError(f"Configuration file not found at: {path}")
+    with open(path, "r", encoding="utf-8") as f:
+        return yaml.safe_load(f)
+
+
+def save_config(config_data: Dict[str, Any], config_path: str | Path | None = None) -> None:
+    """Save updated configuration back to config.yaml."""
+    root = get_project_root()
+    path = Path(config_path) if config_path else root / "config.yaml"
+    with open(path, "w", encoding="utf-8") as f:
+        yaml.safe_dump(config_data, f, sort_keys=False, allow_unicode=True)
+
+
+def get_logger(name: str = "SafeStep", level: int = logging.INFO) -> logging.Logger:
+    """Create or retrieve a configured logger that logs to both console and file."""
+    logger = logging.getLogger(name)
+    if logger.handlers:
+        return logger
+
+    logger.setLevel(level)
+    formatter = logging.Formatter(
+        fmt="%(asctime)s | %(levelname)-8s | %(name)s | %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
+    )
+
+    console_handler = logging.StreamHandler(sys.stdout)
+    console_handler.setFormatter(formatter)
+    logger.addHandler(console_handler)
+
+    try:
+        log_dir = get_project_root() / "logs"
+        log_dir.mkdir(parents=True, exist_ok=True)
+        file_handler = logging.FileHandler(log_dir / "safestep.log", encoding="utf-8")
+        file_handler.setFormatter(formatter)
+        logger.addHandler(file_handler)
+    except Exception:
+        pass
+
+    return logger

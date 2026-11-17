@@ -1,0 +1,47 @@
+{
+  "dataset_name": "object_detection",
+  "dataset_path": "C:\\Users\\rishi\\OneDrive\\Desktop\\v2\\SafeStep\\datasets\\object_detection",
+  "total_usable_images": 2250,
+  "total_bounding_boxes": 6613,
+  "splits": {
+    "train": 1608,
+    "val": 432,
+    "test": 210
+  },
+  "split_percentages": {
+    "train": 71.47,
+    "val": 19.2,
+    "test": 9.33
+  },
+  "class_distribution": {
+    "Person": 578,
+    "Car": 525,
+    "Motorcycle": 603,
+    "Bicycle": 546,
+    "Bus": 531,
+    "Truck": 534,
+    "Pole": 560,
+    "Wall": 552,
+    "Chair": 525,
+    "Table": 567,
+    "Door": 564,
+    "Other obstacles": 528
+  },
+  "provenance": {
+    "programmatic_synthetic_images": 2235,
+    "webcam_or_real_hybrid_images": 15,
+    "augmented_images": 1500,
+    "base_unaugmented_images": 750
+  },
+  "quality_checks": {
+    "corrupted_images_removed": 0,
+    "missing_labels_detected": 0,
+    "invalid_bboxes_detected": 0,
+    "zero_session_leakage_verified": true,
+    "status": "PASSED"
+  },
+  "artifacts": {
+    "class_distribution_graph": "C:\\Users\\rishi\\OneDrive\\Desktop\\v2\\SafeStep\\evaluation\\graphs\\object_detection_class_distribution.png",
+    "sample_annotations_graph": "C:\\Users\\rishi\\OneDrive\\Desktop\\v2\\SafeStep\\evaluation\\graphs\\object_detection_sample_annotations.png"
+  }
+}

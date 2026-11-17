@@ -1,0 +1,41 @@
+{
+  "dataset_name": "currency_detection",
+  "dataset_path": "C:\\Users\\rishi\\OneDrive\\Desktop\\v2\\SafeStep\\datasets\\currency_detection",
+  "total_usable_images": 2580,
+  "total_bounding_boxes": 3432,
+  "splits": {
+    "train": 1800,
+    "val": 510,
+    "test": 270
+  },
+  "split_percentages": {
+    "train": 69.77,
+    "val": 19.77,
+    "test": 10.47
+  },
+  "class_distribution": {
+    "10_rupees": 573,
+    "20_rupees": 570,
+    "50_rupees": 582,
+    "100_rupees": 588,
+    "200_rupees": 549,
+    "500_rupees": 570
+  },
+  "provenance": {
+    "programmatic_synthetic_images": 2580,
+    "webcam_or_real_hybrid_images": 0,
+    "augmented_images": 1720,
+    "base_unaugmented_images": 860
+  },
+  "quality_checks": {
+    "corrupted_images_removed": 0,
+    "missing_labels_detected": 0,
+    "invalid_bboxes_detected": 0,
+    "zero_session_leakage_verified": true,
+    "status": "PASSED"
+  },
+  "artifacts": {
+    "class_distribution_graph": "C:\\Users\\rishi\\OneDrive\\Desktop\\v2\\SafeStep\\evaluation\\graphs\\currency_detection_class_distribution.png",
+    "sample_annotations_graph": "C:\\Users\\rishi\\OneDrive\\Desktop\\v2\\SafeStep\\evaluation\\graphs\\currency_detection_sample_annotations.png"
+  }
+}

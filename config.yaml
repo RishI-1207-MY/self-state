@@ -1,0 +1,130 @@
+# SafeStep: AI-Enabled Smart Navigation System Configuration
+project:
+  name: "SafeStep"
+  version: "1.0.0"
+  description: "AI-Enabled Smart Navigation System for the Visually Impaired with Integrated OCR and Currency Detection"
+  safety_disclaimer: >
+    IMPORTANT SAFETY NOTICE: SafeStep is an assistive research prototype and is NOT a certified
+    medical device or a replacement for a white cane, guide dog, or professional orientation and
+    mobility (O&M) training. Do not rely solely on SafeStep predictions when navigating roads,
+    stairs, traffic, or hazardous environments.
+
+camera:
+  source: 0
+  width: 640
+  height: 480
+  fps_target: 30
+  fallback_to_synthetic_stream: true
+
+models:
+  pretrained_dir: "models/pretrained"
+  base_yolo_weights: "yolov8n.pt"
+  object_detection:
+    weights_path: "models/object_detection/best.pt"
+    onnx_path: "models/object_detection/best.onnx"
+    data_yaml: "datasets/object_detection/data.yaml"
+    confidence_threshold: 0.40
+    iou_threshold: 0.45
+    img_size: 416
+    classes:
+      0: "Person"
+      1: "Car"
+      2: "Motorcycle"
+      3: "Bicycle"
+      4: "Bus"
+      5: "Truck"
+      6: "Pole"
+      7: "Wall"
+      8: "Chair"
+      9: "Table"
+      10: "Door"
+      11: "Other obstacles"
+    hazard_priority_classes:
+      - "Person"
+      - "Car"
+      - "Motorcycle"
+      - "Bicycle"
+      - "Bus"
+      - "Truck"
+      - "Pole"
+      - "Other obstacles"
+  currency_detection:
+    weights_path: "models/currency_detection/best.pt"
+    onnx_path: "models/currency_detection/best.onnx"
+    data_yaml: "datasets/currency_detection/data.yaml"
+    confidence_threshold: 0.45
+    iou_threshold: 0.45
+    img_size: 416
+    classes:
+      0: "10_rupees"
+      1: "20_rupees"
+      2: "50_rupees"
+      3: "100_rupees"
+      4: "200_rupees"
+      5: "500_rupees"
+    denomination_map:
+      "10_rupees": 10
+      "20_rupees": 20
+      "50_rupees": 50
+      "100_rupees": 100
+      "200_rupees": 200
+      "500_rupees": 500
+    spoken_map:
+      10: "Ten rupees"
+      20: "Twenty rupees"
+      50: "Fifty rupees"
+      100: "One hundred rupees"
+      200: "Two hundred rupees"
+      500: "Five hundred rupees"
+    authenticity_disclaimer: >
+      Note: Visual currency detection classifies only the apparent denomination of Indian banknotes
+      and does NOT verify legal authenticity or counterfeit security features.
+
+ocr:
+  languages: ["en"]
+  gpu: false
+  confidence_threshold: 0.45
+  min_text_length: 2
+  auto_interval_seconds: 4.0
+  deduplication_window_seconds: 12.0
+
+distance_sensor:
+  enabled: true
+  mode: "auto"  # "hardware", "simulation", or "auto" (uses hardware if RPi.GPIO available, else simulation)
+  trigger_pin: 23
+  echo_pin: 24
+  poll_rate_hz: 10.0
+  moving_average_window: 5
+  safety_threshold_meters: 2.0
+  critical_threshold_meters: 1.0
+  timeout_seconds: 0.04
+
+audio:
+  enabled: true
+  rate: 175
+  volume: 0.95
+  cooldown_seconds: 4.0
+  urgent_cooldown_seconds: 2.0
+  max_queue_size: 10
+
+navigation:
+  object_detection_interval_frames: 1
+  currency_detection_interval_seconds: 3.0
+  ocr_interval_seconds: 5.0
+  track_persistence_frames: 15
+
+training:
+  object_detection:
+    epochs: 5
+    batch_size: 16
+    img_size: 320
+    learning_rate: 0.01
+    device: "cpu"
+    workers: 2
+  currency_detection:
+    epochs: 5
+    batch_size: 16
+    img_size: 320
+    learning_rate: 0.01
+    device: "cpu"
+    workers: 2

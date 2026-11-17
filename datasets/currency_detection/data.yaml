@@ -1,0 +1,12 @@
+path: C:/Users/rishi/OneDrive/Desktop/v2/SafeStep/datasets/currency_detection
+train: images/train
+val: images/val
+test: images/test
+nc: 6
+names:
+  0: 10_rupees
+  1: 20_rupees
+  2: 50_rupees
+  3: 100_rupees
+  4: 200_rupees
+  5: 500_rupees

@@ -1,0 +1,21 @@
+{
+  "component": "HC-SR04 Ultrasonic Sensor (GPIO23 TRIG, GPIO24 ECHO via 1k\u03a9/2k\u03a9 divider)",
+  "status": "PENDING_PHYSICAL_PI_EXECUTION",
+  "is_simulated": false,
+  "trigger_pin_bcm": 23,
+  "echo_pin_bcm": 24,
+  "voltage_divider": "1k\u03a9 (series) + 2k\u03a9 (to GND) -> 3.3V safe GPIO24 input",
+  "reason": "Physical Raspberry Pi GPIO not detected on this host. Run on Raspberry Pi 4 or pass `--simulate` to test software filter logic only.",
+  "wiring_guide": "HC-SR04 to Raspberry Pi 4B / 5 Wiring Guide (BCM Numbering):\n  1. VCC  -> Physical Pin 2  (5V Power)\n  2. TRIG -> Physical Pin 16 (GPIO 23)\n  3. ECHO -> Physical Pin 18 (GPIO 24) MUST use voltage divider (1k\u03a9 + 2k\u03a9) to step 5V down to 3.3V\n  4. GND  -> Physical Pin 6  (Ground)\n",
+  "diagnostics": {
+    "os": "Windows",
+    "architecture": "AMD64",
+    "is_raspberry_pi": false,
+    "rpi_gpio_installed": false,
+    "gpiozero_installed": false,
+    "hardware_ready": false,
+    "trigger_pin_bcm": 23,
+    "echo_pin_bcm": 24,
+    "fallback_mode": "simulation"
+  }
+}

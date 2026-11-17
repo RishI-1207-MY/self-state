@@ -1,0 +1,51 @@
+{
+  "model": "SafeStep Indian Currency Detection (YOLOv8n)",
+  "weights_path": "C:\\Users\\rishi\\OneDrive\\Desktop\\v2\\SafeStep\\models\\currency_detection\\best.pt",
+  "evaluated_split": "test",
+  "precision": 0.8672,
+  "recall": 0.8964,
+  "mAP50": 0.9148,
+  "mAP50_95": 0.7157,
+  "avg_inference_ms": 20.38,
+  "fps": 49.07,
+  "evaluation_duration_sec": 7.06,
+  "per_denomination_metrics": {
+    "10_rupees": {
+      "precision": 0.7602,
+      "recall": 0.8667,
+      "mAP50": 0.8848,
+      "mAP50_95": 0.6665
+    },
+    "20_rupees": {
+      "precision": 0.977,
+      "recall": 0.7445,
+      "mAP50": 0.9532,
+      "mAP50_95": 0.737
+    },
+    "50_rupees": {
+      "precision": 0.9966,
+      "recall": 1.0,
+      "mAP50": 0.995,
+      "mAP50_95": 0.8469
+    },
+    "100_rupees": {
+      "precision": 0.9901,
+      "recall": 1.0,
+      "mAP50": 0.995,
+      "mAP50_95": 0.8404
+    },
+    "200_rupees": {
+      "precision": 0.5146,
+      "recall": 0.902,
+      "mAP50": 0.6869,
+      "mAP50_95": 0.4979
+    },
+    "500_rupees": {
+      "precision": 0.9646,
+      "recall": 0.865,
+      "mAP50": 0.9739,
+      "mAP50_95": 0.7055
+    }
+  },
+  "confusion_matrix_graph": "C:\\Users\\rishi\\OneDrive\\Desktop\\v2\\SafeStep\\evaluation\\graphs\\currency_detection_confusion_matrix.png"
+}

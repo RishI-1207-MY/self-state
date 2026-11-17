@@ -1,0 +1,14 @@
+{
+  "model_name": "safestep_object_yolov8n",
+  "base_weights": "C:\\Users\\rishi\\OneDrive\\Desktop\\v2\\SafeStep\\models\\pretrained\\yolov8n.pt",
+  "best_weights_path": "C:\\Users\\rishi\\OneDrive\\Desktop\\v2\\SafeStep\\models\\object_detection\\best.pt",
+  "data_yaml": "C:\\Users\\rishi\\OneDrive\\Desktop\\v2\\SafeStep\\datasets\\object_detection\\data.yaml",
+  "epochs": 3,
+  "batch_size": 32,
+  "img_size": 320,
+  "learning_rate": 0.01,
+  "device": "cpu",
+  "fraction": 0.45,
+  "training_duration_seconds": 513.38,
+  "training_curves_graph": "C:\\Users\\rishi\\OneDrive\\Desktop\\v2\\SafeStep\\evaluation\\graphs\\object_detection_training_curves.png"
+}

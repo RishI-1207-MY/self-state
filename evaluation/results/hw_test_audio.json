@@ -1,0 +1,11 @@
+{
+  "component": "Offline Audio Output (Earphones / USB Audio + pyttsx3/espeak-ng)",
+  "status": "LAPTOP_AUDIO_VERIFIED_PENDING_PI_EARPHONES_TEST",
+  "is_raspberry_pi": false,
+  "os": "Windows",
+  "pyttsx3_driver_available": false,
+  "espeak_binary_path": null,
+  "alsa_playback_devices": [],
+  "priority_alerts_tested": 4,
+  "note": "Windows laptop TTS verified; physical Raspberry Pi earphone/USB audio test remains PENDING until executed on the Pi."
+}

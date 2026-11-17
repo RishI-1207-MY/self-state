@@ -1,0 +1,690 @@
+"""SAFESTEP – AI-Enabled Smart Navigation System for the Visually Impaired.
+
+Professional, high-contrast, accessible Streamlit dashboard providing:
+A. Home Dashboard
+B. Live Navigation (real-time webcam / demo stream, object detection, OCR, currency, ultrasonic distance, voice alerts)
+C. OCR Reader (upload or webcam capture, environmental text recognition, read aloud, clear)
+D. Currency Recognition (upload or webcam capture, multi-note INR denomination detection, confidence, voice announcement)
+E. Dataset Explorer (actual image counts, provenance breakdown, class distribution, train/val/test split, sample annotations)
+F. Model Performance (actual evaluated Precision, Recall, mAP@50, mAP@50-95, confusion matrix, loss curves, FPS, latency)
+G. Settings (configurable thresholds, camera source, intervals, voice rate/volume, ultrasonic threshold, hardware mode)
+"""
+
+import json
+from pathlib import Path
+import sys
+import time
+from typing import Any, Dict
+import cv2
+import numpy as np
+import pandas as pd
+from PIL import Image
+import streamlit as st
+
+PROJECT_ROOT = Path(__file__).resolve().parent
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+from hardware.raspberry_pi_setup import check_gpio_availability, get_wiring_guide
+from modules.audio_feedback import announce_currency, announce_obstacle, announce_text, get_audio_engine, speak
+from modules.navigation_engine import SafeStepNavigationEngine
+from utils.logger import load_config, save_config
+from utils.visualization import draw_currency_detections, draw_ocr_results
+
+st.set_page_config(
+    page_title="SAFESTEP | AI Assistive Navigation System",
+    page_icon="🦯",
+    layout="wide",
+    initial_sidebar_state="expanded",
+)
+
+# High-contrast accessibility styling
+st.markdown(
+    """
+    <style>
+    .stApp {
+        background-color: #0b0f19;
+        color: #f8fafc;
+    }
+    h1, h2, h3, h4 {
+        color: #38bdf8 !important;
+        font-weight: 700 !important;
+    }
+    .safety-banner {
+        background-color: #3b0712;
+        border-left: 6px solid #f43f5e;
+        padding: 14px 18px;
+        border-radius: 6px;
+        color: #ffe4e6;
+        font-size: 1.02rem;
+        margin-bottom: 16px;
+    }
+    .status-card {
+        background-color: #111827;
+        border: 2px solid #1e293b;
+        border-radius: 10px;
+        padding: 16px;
+        margin-bottom: 12px;
+    }
+    .voice-alert-box {
+        background-color: #064e3b;
+        border: 2px solid #10b981;
+        border-radius: 8px;
+        padding: 14px;
+        font-size: 1.15rem;
+        font-weight: 600;
+        color: #ecfdf5;
+        margin-top: 8px;
+        margin-bottom: 12px;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
+
+
+@st.cache_resource
+def get_engine() -> SafeStepNavigationEngine:
+    """Initialize and cache the central SafeStepNavigationEngine instance."""
+    return SafeStepNavigationEngine(lazy_ocr=True)
+
+
+def _load_json_if_exists(path: Path) -> Dict[str, Any] | None:
+    if path.exists():
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            return None
+    return None
+
+
+def _bgr_to_rgb(img_bgr: np.ndarray) -> np.ndarray:
+    return cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)
+
+
+def _uploaded_to_bgr(uploaded_file: Any) -> np.ndarray | None:
+    if uploaded_file is None:
+        return None
+    try:
+        file_bytes = np.asarray(bytearray(uploaded_file.read()), dtype=np.uint8)
+        img = cv2.imdecode(file_bytes, cv2.IMREAD_COLOR)
+        if img is None or img.size == 0:
+            return None
+        return img
+    except Exception:
+        return None
+
+
+def render_safety_disclaimer(cfg: Dict[str, Any]) -> None:
+    disclaimer = cfg.get("project", {}).get(
+        "safety_disclaimer",
+        "IMPORTANT SAFETY NOTICE: SafeStep is an assistive prototype and is NOT a certified replacement "
+        "for a white cane, guide dog, or independent mobility training. Do not rely solely on its predictions "
+        "when navigating roads or hazardous environments.",
+    )
+    st.markdown(f'<div class="safety-banner">⚠️ <b>SAFETY NOTICE:</b> {disclaimer}</div>', unsafe_allow_html=True)
+
+
+def render_home_dashboard(engine: SafeStepNavigationEngine, cfg: Dict[str, Any]) -> None:
+    st.title("🦯 SAFESTEP: AI-Enabled Smart Navigation System")
+    st.subheader("Assistive Computer Vision with Integrated Object Detection, OCR, and Indian Currency Recognition")
+    render_safety_disclaimer(cfg)
+
+    overview = engine.get_system_overview()
+    col1, col2, col3, col4 = st.columns(4)
+
+    with col1:
+        obj_loaded = overview["object_model"]["loaded"]
+        obj_custom = overview["object_model"]["custom_weights"]
+        st.metric(
+            "Object Detection Model",
+            "Custom YOLOv8n" if obj_custom else ("Pretrained Fallback" if obj_loaded else "Missing"),
+            delta="Ready" if obj_loaded else "Offline",
+        )
+    with col2:
+        curr_loaded = overview["currency_model"]["loaded"]
+        st.metric(
+            "Currency Detection Model",
+            "Custom INR YOLOv8n" if curr_loaded else "Not Loaded",
+            delta="6 Denominations" if curr_loaded else "Train Required",
+        )
+    with col3:
+        aud = overview["audio"]
+        st.metric(
+            "Offline Audio (pyttsx3)",
+            "Enabled" if aud["enabled"] else "Muted",
+            delta=f"{aud['rate']} WPM | Vol {int(aud['volume']*100)}%",
+        )
+    with col4:
+        dist = overview["distance_sensor"]
+        st.metric(
+            "Ultrasonic Sensor (HC-SR04)",
+            f"{dist['distance_m']:.2f} m",
+            delta="SIMULATION MODE" if dist["is_simulated"] else "HARDWARE GPIO",
+        )
+
+    st.markdown("---")
+    c_left, c_right = st.columns([3, 2])
+    with c_left:
+        st.markdown("### Core Assistive Capabilities")
+        st.markdown(
+            """
+            1. **Real-Time Obstacle & Object Detection**: Identifies 12 indoor/outdoor navigation classes (`Person`, `Car`, `Motorcycle`, `Bicycle`, `Bus`, `Truck`, `Pole`, `Wall`, `Chair`, `Table`, `Door`, `Other obstacles`) with cross-frame tracking and directional localization (`left`, `ahead`, `right`).
+            2. **Optical Character Recognition (EasyOCR)**: Extracts text from signboards, room numbers, and notices offline and reads them aloud.
+            3. **Indian Currency Denomination Recognition**: Classifies `₹10`, `₹20`, `₹50`, `₹100`, `₹200`, and `₹500` banknotes (single or multiple notes per frame) with confidence scores and spoken announcements.
+            4. **Prioritized Audio Feedback & Ultrasonic Distance Warning**: Priority queue ensures immediate `< 2.0m` obstacle warnings preempt lower-priority announcements.
+            """
+        )
+    with c_right:
+        st.markdown("### Live Subsystem Diagnostics")
+        st.json(overview)
+
+
+def render_live_navigation(engine: SafeStepNavigationEngine, cfg: Dict[str, Any]) -> None:
+    st.title("🎥 Live Assistive Navigation")
+    render_safety_disclaimer(cfg)
+
+    if "nav_running" not in st.session_state:
+        st.session_state.nav_running = False
+
+    ctrl1, ctrl2, ctrl3, ctrl4, ctrl5 = st.columns(5)
+    with ctrl1:
+        if st.button("▶️ Start Navigation", use_container_width=True, type="primary"):
+            engine.start()
+            st.session_state.nav_running = True
+    with ctrl2:
+        if st.button("⏹️ Stop Navigation", use_container_width=True):
+            engine.stop()
+            st.session_state.nav_running = False
+    with ctrl3:
+        trigger_single = st.button("📸 Process Single Frame", use_container_width=True)
+    with ctrl4:
+        trigger_ocr = st.button("🔤 Trigger OCR Now", use_container_width=True)
+    with ctrl5:
+        trigger_curr = st.button("💴 Check Currency Now", use_container_width=True)
+
+    sim_col1, sim_col2 = st.columns([2, 3])
+    with sim_col1:
+        use_manual_dist = st.checkbox(
+            "Override Simulated Ultrasonic Distance (Laptop Demo)",
+            value=False,
+        )
+    with sim_col2:
+        if use_manual_dist:
+            sim_dist_val = st.slider("Simulated Obstacle Distance (meters)", 0.3, 4.0, 1.6, 0.1)
+            engine.distance_sensor.set_simulated_distance(sim_dist_val)
+        else:
+            engine.distance_sensor.set_simulated_distance(None)
+
+    video_col, telemetry_col = st.columns([3, 2])
+    frame_placeholder = video_col.empty()
+    voice_placeholder = telemetry_col.empty()
+    metrics_placeholder = telemetry_col.empty()
+    detections_placeholder = telemetry_col.empty()
+
+    def _update_ui_with_step(step_res: Dict[str, Any]) -> None:
+        if "error" in step_res:
+            frame_placeholder.error(step_res["error"])
+            return
+        rgb_frame = _bgr_to_rgb(step_res["annotated_frame"])
+        frame_placeholder.image(rgb_frame, channels="RGB", use_container_width=True)
+
+        voice_msg = step_res.get("latest_voice_alert") or "Monitoring environment..."
+        voice_placeholder.markdown(
+            f'<div class="voice-alert-box">🔊 <b>Latest Voice Alert:</b> {voice_msg}</div>',
+            unsafe_allow_html=True,
+        )
+
+        obj_r = step_res["object_results"]
+        dist_r = step_res["distance_results"]
+        sys_m = step_res["system_metrics"]
+        metrics_placeholder.markdown(
+            f"""
+            **Live Telemetry**
+            - **Objects Detected**: `{obj_r['num_objects']}` (Hazards: `{len(obj_r['hazards'])}`)
+            - **Processing FPS**: `{sys_m['fps']}` | **Object Inference**: `{obj_r['inference_ms']} ms`
+            - **Distance ({dist_r['mode_label']})**: `{dist_r['distance_m']:.2f} m` (Threshold: `{dist_r['safety_threshold_m']:.1f} m`)
+            - **OCR Reading**: `{step_res['ocr_results'].get('combined_text') or 'None'}`
+            """
+        )
+        if obj_r["detections"]:
+            df_det = pd.DataFrame(
+                [
+                    {
+                        "Object": d["class_name"],
+                        "Confidence (%)": round(d["confidence"] * 100, 1),
+                        "Position": d.get("position", "ahead"),
+                        "Hazard": "Yes" if d.get("is_hazard") else "No",
+                    }
+                    for d in obj_r["detections"]
+                ]
+            )
+            detections_placeholder.dataframe(df_det, use_container_width=True, hide_index=True)
+        else:
+            detections_placeholder.info("No obstacles currently above confidence threshold.")
+
+    if trigger_single or trigger_ocr or trigger_curr:
+        engine.camera.start()
+        step_out = engine.process_frame(run_ocr_now=trigger_ocr, run_currency_now=trigger_curr)
+        _update_ui_with_step(step_out)
+    elif st.session_state.nav_running:
+        # Stream a burst of frames per Streamlit cycle and rerun smoothly
+        for _ in range(15):
+            if not st.session_state.nav_running:
+                break
+            step_out = engine.process_frame()
+            _update_ui_with_step(step_out)
+            time.sleep(0.04)
+    else:
+        st.info("Click **Start Navigation** for continuous real-time feed or **Process Single Frame** to inspect a snapshot.")
+
+
+def render_ocr_reader(engine: SafeStepNavigationEngine) -> None:
+    st.title("🔤 Environmental OCR Reader")
+    st.write("Upload an environmental sign/document image or capture from the webcam to extract and read text aloud.")
+
+    if "ocr_result_state" not in st.session_state:
+        st.session_state.ocr_result_state = None
+        st.session_state.ocr_image_state = None
+
+    tab_upload, tab_cam, tab_demo = st.tabs(["📂 Upload Image", "📷 Capture from Webcam", "🧪 Sample Signboard"])
+
+    input_bgr: np.ndarray | None = None
+    with tab_upload:
+        up_file = st.file_uploader("Upload an image containing text (JPG, PNG)", type=["jpg", "jpeg", "png"], key="ocr_up")
+        if up_file is not None:
+            input_bgr = _uploaded_to_bgr(up_file)
+            if input_bgr is None:
+                st.error("Corrupted or invalid image upload. Please select a valid JPG/PNG image.")
+
+    with tab_cam:
+        cam_shot = st.camera_input("Capture image from webcam for OCR")
+        if cam_shot is not None:
+            input_bgr = _uploaded_to_bgr(cam_shot)
+
+    with tab_demo:
+        if st.button("Generate Test Signboard ('Room Number 204 - Emergency Exit')"):
+            demo_img = np.full((320, 640, 3), 245, dtype=np.uint8)
+            cv2.rectangle(demo_img, (25, 25), (615, 295), (20, 40, 90), 4)
+            cv2.putText(demo_img, "ROOM NUMBER 204", (65, 135), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (15, 15, 15), 4, cv2.LINE_AA)
+            cv2.putText(demo_img, "COMPUTER VISION LAB", (85, 225), cv2.FONT_HERSHEY_SIMPLEX, 1.1, (30, 80, 30), 3, cv2.LINE_AA)
+            input_bgr = demo_img
+
+    b_col1, b_col2, b_col3 = st.columns(3)
+    with b_col1:
+        run_ocr_btn = st.button("🔍 Extract Text", type="primary", use_container_width=True)
+    with b_col2:
+        speak_ocr_btn = st.button("🔊 Read Text Aloud", use_container_width=True)
+    with b_col3:
+        clear_ocr_btn = st.button("🗑️ Clear Results", use_container_width=True)
+
+    if clear_ocr_btn:
+        st.session_state.ocr_result_state = None
+        st.session_state.ocr_image_state = None
+        st.rerun()
+
+    if run_ocr_btn:
+        if input_bgr is None:
+            ok, cam_frame = engine.camera.read_frame()
+            if ok and cam_frame is not None:
+                input_bgr = cam_frame
+        if input_bgr is None:
+            st.warning("Please upload an image, capture from webcam, or generate a sample signboard first.")
+        else:
+            with st.spinner("Running EasyOCR text extraction..."):
+                res = engine.ocr_engine.extract_text(input_bgr, deduplicate=False)
+                annotated = draw_ocr_results(input_bgr, res.get("items", []))
+                st.session_state.ocr_result_state = res
+                st.session_state.ocr_image_state = annotated
+                if res.get("detected"):
+                    announce_text(res["combined_text"])
+
+    if speak_ocr_btn and st.session_state.ocr_result_state:
+        txt = st.session_state.ocr_result_state.get("combined_text", "")
+        if txt:
+            speak(f"Text detected. Reading: {txt}", bypass_cooldown=True)
+            st.success(f"Announced: 'Text detected. Reading: {txt}'")
+        else:
+            st.warning("No recognized text to read aloud.")
+
+    if st.session_state.ocr_result_state is not None:
+        res = st.session_state.ocr_result_state
+        c1, c2 = st.columns([3, 2])
+        with c1:
+            if st.session_state.ocr_image_state is not None:
+                st.image(_bgr_to_rgb(st.session_state.ocr_image_state), caption="OCR Detection Overlay", use_container_width=True)
+        with c2:
+            st.markdown("### Extracted Text Output")
+            if res.get("detected"):
+                st.success(res["announcement"])
+                st.code(res["combined_text"], language="text")
+                st.caption(f"Inference latency: {res.get('inference_ms', 0.0)} ms")
+                st.dataframe(pd.DataFrame(res["items"])[["text", "confidence"]], use_container_width=True, hide_index=True)
+            else:
+                st.warning("No readable text detected above the confidence threshold.")
+
+
+def render_currency_recognition(engine: SafeStepNavigationEngine, cfg: Dict[str, Any]) -> None:
+    st.title("💴 Indian Currency Denomination Recognition")
+    disclaimer = cfg.get("models", {}).get("currency_detection", {}).get(
+        "authenticity_disclaimer",
+        "Note: Visual currency detection classifies only the apparent denomination of Indian banknotes "
+        "and does NOT verify whether a note is genuine or authentic.",
+    )
+    st.info(f"ℹ️ {disclaimer}")
+
+    tab_up, tab_cam, tab_test = st.tabs(["📂 Upload Currency Image", "📷 Capture via Webcam", "🧪 Sample Test Set Note"])
+    curr_bgr: np.ndarray | None = None
+
+    with tab_up:
+        up_curr = st.file_uploader("Upload Indian banknote image (₹10, ₹20, ₹50, ₹100, ₹200, ₹500)", type=["jpg", "jpeg", "png"], key="curr_up")
+        if up_curr is not None:
+            curr_bgr = _uploaded_to_bgr(up_curr)
+            if curr_bgr is None:
+                st.error("Invalid or corrupted image file.")
+
+    with tab_cam:
+        cam_curr = st.camera_input("Capture currency note from webcam")
+        if cam_curr is not None:
+            curr_bgr = _uploaded_to_bgr(cam_curr)
+
+    with tab_test:
+        test_curr_dir = PROJECT_ROOT / "datasets" / "currency_detection" / "images" / "test"
+        test_files = sorted(test_curr_dir.glob("*.jpg")) if test_curr_dir.exists() else []
+        if test_files:
+            selected_sample = st.selectbox(
+                "Select a held-out test image from Dataset B (`currency_detection/images/test`)",
+                options=test_files[:30],
+                format_func=lambda p: p.name,
+            )
+            if st.button("Load Selected Currency Test Image"):
+                curr_bgr = cv2.imread(str(selected_sample))
+        else:
+            st.caption("No currency test images found yet.")
+
+    if st.button("🔍 Detect Currency Denomination", type="primary") or curr_bgr is not None:
+        if curr_bgr is None:
+            st.warning("Please upload, capture, or select a currency image first.")
+        else:
+            res = engine.currency_detector.detect(curr_bgr)
+            annotated = draw_currency_detections(curr_bgr, res.get("notes", []))
+            col_img, col_res = st.columns([3, 2])
+            with col_img:
+                st.image(_bgr_to_rgb(annotated), caption="Detected Indian Currency Notes", use_container_width=True)
+            with col_res:
+                if res["detected"]:
+                    st.success(res["announcement"])
+                    announce_currency(res["denomination"])
+                    st.metric("Primary Denomination", f"₹{res['denomination']}", delta=f"{res['confidence']*100:.1f}% confidence")
+                    st.metric("Total Value Detected", f"₹{res['total_value_inr']}", delta=f"{len(res['notes'])} note(s)")
+                    st.markdown("#### Structured JSON Output")
+                    st.json(
+                        {
+                            "detected": res["detected"],
+                            "currency": res["currency"],
+                            "denomination": res["denomination"],
+                            "confidence": res["confidence"],
+                            "total_value_inr": res["total_value_inr"],
+                            "num_notes": len(res["notes"]),
+                        }
+                    )
+                else:
+                    st.warning("No Indian currency notes detected above confidence threshold.")
+
+
+def render_dataset_explorer() -> None:
+    st.title("📊 Dataset Explorer & Quality Reports")
+    st.write("Actual verified statistics, provenance metadata, split ratios, and sample annotations for both custom SafeStep datasets.")
+
+    obj_rep = _load_json_if_exists(PROJECT_ROOT / "evaluation" / "reports" / "object_detection_quality_report.json")
+    curr_rep = _load_json_if_exists(PROJECT_ROOT / "evaluation" / "reports" / "currency_detection_quality_report.json")
+
+    col_a, col_b = st.columns(2)
+    with col_a:
+        st.markdown("### Dataset A: Object & Obstacle Detection (12 Classes)")
+        if obj_rep:
+            m1, m2, m3 = st.columns(3)
+            m1.metric("Usable Images", obj_rep["total_usable_images"])
+            m2.metric("Bounding Boxes", obj_rep["total_bounding_boxes"])
+            m3.metric("Quality Status", obj_rep["quality_checks"]["status"])
+            st.write("**Train / Val / Test Split Counts:**", obj_rep["splits"])
+            st.write("**Provenance Transparency (`metadata.csv`):**", obj_rep["provenance"])
+            dist_img = Path(obj_rep["artifacts"]["class_distribution_graph"])
+            if dist_img.exists():
+                st.image(str(dist_img), caption="Dataset A Class Distribution", use_container_width=True)
+            samp_img = Path(obj_rep["artifacts"]["sample_annotations_graph"])
+            if samp_img.exists():
+                st.image(str(samp_img), caption="Dataset A Verified Annotations", use_container_width=True)
+        else:
+            st.warning("Dataset A quality report not yet generated. Run `validate_dataset.py`.")
+
+    with col_b:
+        st.markdown("### Dataset B: Indian Currency Detection (6 Denominations)")
+        if curr_rep:
+            m1, m2, m3 = st.columns(3)
+            m1.metric("Usable Images", curr_rep["total_usable_images"])
+            m2.metric("Bounding Boxes", curr_rep["total_bounding_boxes"])
+            m3.metric("Quality Status", curr_rep["quality_checks"]["status"])
+            st.write("**Train / Val / Test Split Counts:**", curr_rep["splits"])
+            st.write("**Provenance Transparency (`metadata.csv`):**", curr_rep["provenance"])
+            dist_img = Path(curr_rep["artifacts"]["class_distribution_graph"])
+            if dist_img.exists():
+                st.image(str(dist_img), caption="Dataset B Denomination Distribution", use_container_width=True)
+            samp_img = Path(curr_rep["artifacts"]["sample_annotations_graph"])
+            if samp_img.exists():
+                st.image(str(samp_img), caption="Dataset B Verified Annotations", use_container_width=True)
+        else:
+            st.warning("Dataset B quality report not yet generated. Run `validate_dataset.py`.")
+
+
+def render_model_performance(engine: SafeStepNavigationEngine) -> None:
+    st.title("📈 Model Performance & System Evaluation")
+    st.caption("Displays only actual measured metrics produced by evaluating the trained models on the held-out test sets.")
+
+    obj_eval = _load_json_if_exists(PROJECT_ROOT / "evaluation" / "results" / "object_evaluation_metrics.json")
+    curr_eval = _load_json_if_exists(PROJECT_ROOT / "evaluation" / "results" / "currency_evaluation_metrics.json")
+
+    tab_obj, tab_curr, tab_sys = st.tabs([
+        "🚶 Object Detection Evaluation",
+        "💴 Currency Detection Evaluation",
+        "⚡ System Latency & Resource Benchmarks",
+    ])
+
+    with tab_obj:
+        if obj_eval:
+            k1, k2, k3, k4, k5, k6 = st.columns(6)
+            k1.metric("Precision", f"{obj_eval['precision']:.4f}")
+            k2.metric("Recall", f"{obj_eval['recall']:.4f}")
+            k3.metric("mAP@50", f"{obj_eval['mAP50']:.4f}")
+            k4.metric("mAP@50-95", f"{obj_eval['mAP50_95']:.4f}")
+            k5.metric("Inference Time", f"{obj_eval['avg_inference_ms']} ms")
+            k6.metric("Throughput", f"{obj_eval['fps']} FPS")
+
+            g1, g2 = st.columns(2)
+            cm_path = Path(obj_eval.get("confusion_matrix_graph", ""))
+            loss_path = PROJECT_ROOT / "evaluation" / "graphs" / "object_detection_training_curves.png"
+            with g1:
+                if cm_path.exists():
+                    st.image(str(cm_path), caption="Object Detection Confusion Matrix (Test Split)", use_container_width=True)
+            with g2:
+                if loss_path.exists():
+                    st.image(str(loss_path), caption="Object Detection Training & Validation Curves", use_container_width=True)
+
+            if obj_eval.get("per_class_metrics"):
+                st.markdown("#### Per-Class Performance on Test Split")
+                df_cls = pd.DataFrame.from_dict(obj_eval["per_class_metrics"], orient="index").reset_index()
+                df_cls.rename(columns={"index": "Class"}, inplace=True)
+                st.dataframe(df_cls, use_container_width=True, hide_index=True)
+        else:
+            st.warning("Object model evaluation metrics not yet generated. Run `training/evaluate_object_model.py`.")
+
+    with tab_curr:
+        if curr_eval:
+            k1, k2, k3, k4, k5, k6 = st.columns(6)
+            k1.metric("Precision", f"{curr_eval['precision']:.4f}")
+            k2.metric("Recall", f"{curr_eval['recall']:.4f}")
+            k3.metric("mAP@50", f"{curr_eval['mAP50']:.4f}")
+            k4.metric("mAP@50-95", f"{curr_eval['mAP50_95']:.4f}")
+            k5.metric("Inference Time", f"{curr_eval['avg_inference_ms']} ms")
+            k6.metric("Throughput", f"{curr_eval['fps']} FPS")
+
+            g1, g2 = st.columns(2)
+            cm_path = Path(curr_eval.get("confusion_matrix_graph", ""))
+            loss_path = PROJECT_ROOT / "evaluation" / "graphs" / "currency_detection_training_curves.png"
+            with g1:
+                if cm_path.exists():
+                    st.image(str(cm_path), caption="Indian Currency Confusion Matrix (Test Split)", use_container_width=True)
+            with g2:
+                if loss_path.exists():
+                    st.image(str(loss_path), caption="Indian Currency Training & Validation Curves", use_container_width=True)
+
+            if curr_eval.get("per_denomination_metrics"):
+                st.markdown("#### Per-Denomination Performance on Test Split")
+                df_den = pd.DataFrame.from_dict(curr_eval["per_denomination_metrics"], orient="index").reset_index()
+                df_den.rename(columns={"index": "Denomination"}, inplace=True)
+                st.dataframe(df_den, use_container_width=True, hide_index=True)
+        else:
+            st.warning("Currency model evaluation metrics not yet generated. Run `training/evaluate_currency_model.py`.")
+
+    with tab_sys:
+        sys_bench = _load_json_if_exists(PROJECT_ROOT / "evaluation" / "results" / "system_benchmark.json")
+        live_metrics = engine.perf.get_system_metrics()
+        st.markdown("#### Live Runtime Resource Telemetry")
+        st.json(live_metrics)
+        if sys_bench:
+            st.markdown("#### Recorded System & Environmental Condition Benchmark")
+            st.json(sys_bench)
+
+
+def render_settings(engine: SafeStepNavigationEngine, cfg: Dict[str, Any]) -> None:
+    st.title("⚙️ System Configuration & Hardware Settings")
+
+    with st.form("safestep_settings_form"):
+        c1, c2 = st.columns(2)
+        with c1:
+            st.markdown("#### AI Inference & Camera Settings")
+            obj_conf = st.slider(
+                "Object Detection Confidence Threshold",
+                0.15,
+                0.90,
+                float(engine.object_detector.confidence_threshold),
+                0.05,
+            )
+            curr_conf = st.slider(
+                "Currency Detection Confidence Threshold",
+                0.15,
+                0.90,
+                float(engine.currency_detector.confidence_threshold),
+                0.05,
+            )
+            cam_src = st.number_input("Camera Source Index", min_value=0, max_value=4, value=int(cfg["camera"].get("source", 0)))
+            ocr_int = st.slider("Automatic OCR Interval (seconds)", 1.0, 15.0, float(engine.ocr_interval_sec), 0.5)
+            curr_int = st.slider("Automatic Currency Interval (seconds)", 1.0, 15.0, float(engine.currency_interval_sec), 0.5)
+
+        with c2:
+            st.markdown("#### Audio Feedback & Ultrasonic Sensor")
+            aud_enabled = st.checkbox("Enable Offline Voice Feedback (pyttsx3)", value=bool(engine.audio.enabled))
+            aud_rate = st.slider("Voice Speed (Words Per Minute)", 110, 260, int(engine.audio.rate), 5)
+            aud_vol = st.slider("Audio Volume", 0.1, 1.0, float(engine.audio.volume), 0.05)
+            dist_thresh = st.slider(
+                "Obstacle Safety Distance Threshold (meters)",
+                0.5,
+                3.5,
+                float(engine.distance_sensor.safety_threshold_meters),
+                0.1,
+            )
+            hw_mode = st.selectbox(
+                "Ultrasonic Sensor Mode",
+                options=["auto", "simulation", "hardware"],
+                index=["auto", "simulation", "hardware"].index(cfg["distance_sensor"].get("mode", "auto")),
+            )
+
+        submitted = st.form_submit_button("💾 Apply & Save Settings", type="primary")
+        if submitted:
+            engine.object_detector.confidence_threshold = obj_conf
+            engine.currency_detector.confidence_threshold = curr_conf
+            engine.ocr_interval_sec = ocr_int
+            engine.currency_interval_sec = curr_int
+            engine.distance_sensor.safety_threshold_meters = dist_thresh
+            engine.audio.configure(enabled=aud_enabled, rate=aud_rate, volume=aud_vol)
+
+            cfg["camera"]["source"] = int(cam_src)
+            cfg["models"]["object_detection"]["confidence_threshold"] = obj_conf
+            cfg["models"]["currency_detection"]["confidence_threshold"] = curr_conf
+            cfg["navigation"]["ocr_interval_seconds"] = ocr_int
+            cfg["navigation"]["currency_detection_interval_seconds"] = curr_int
+            cfg["audio"]["enabled"] = aud_enabled
+            cfg["audio"]["rate"] = aud_rate
+            cfg["audio"]["volume"] = aud_vol
+            cfg["distance_sensor"]["safety_threshold_meters"] = dist_thresh
+            cfg["distance_sensor"]["mode"] = hw_mode
+            save_config(cfg)
+            st.success("Configuration applied to live engine and saved to `config.yaml`.")
+
+    st.markdown("---")
+    st.markdown("### Raspberry Pi 4 Hardware & Parallel Deployment Status")
+    col_hw1, col_hw2 = st.columns(2)
+    with col_hw1:
+        st.markdown("#### Hardware Test Status (`PENDING_PHYSICAL_PI_EXECUTION` until run on Pi)")
+        hw_picam = _load_json_if_exists(PROJECT_ROOT / "evaluation" / "results" / "hw_test_picamera2.json")
+        hw_hcsr = _load_json_if_exists(PROJECT_ROOT / "evaluation" / "results" / "hw_test_hcsr04.json")
+        hw_aud = _load_json_if_exists(PROJECT_ROOT / "evaluation" / "results" / "hw_test_audio.json")
+        st.write(
+            {
+                "active_config_profile": cfg.get("profile", cfg.get("_active_profile", "windows_development")),
+                "loaded_config_file": cfg.get("_loaded_config_path", "config.yaml"),
+                "picamera2_csi_test": hw_picam.get("status") if hw_picam else "PENDING_PHYSICAL_PI_EXECUTION",
+                "hcsr04_gpio23_24_test": hw_hcsr.get("status") if hw_hcsr else "PENDING_PHYSICAL_PI_EXECUTION",
+                "earphones_usb_audio_test": hw_aud.get("status") if hw_aud else "PENDING_PHYSICAL_PI_EXECUTION",
+            }
+        )
+    with col_hw2:
+        st.markdown("#### Raspberry Pi GPIO & HC-SR04 Diagnostics")
+        st.json(check_gpio_availability())
+    st.code(get_wiring_guide(), language="text")
+
+
+def main() -> None:
+    cfg = load_config()
+    engine = get_engine()
+
+    st.sidebar.title("🦯 SAFESTEP")
+    st.sidebar.caption("AI Assistive Navigation System")
+    nav_choice = st.sidebar.radio(
+        "Select Module",
+        options=[
+            "🏠 Home Dashboard",
+            "🎥 Live Navigation",
+            "🔤 OCR Reader",
+            "💴 Currency Recognition",
+            "📊 Dataset Explorer",
+            "📈 Model Performance",
+            "⚙️ Settings",
+        ],
+    )
+
+    st.sidebar.markdown("---")
+    st.sidebar.markdown("**Quick Voice Check**")
+    if st.sidebar.button("🔊 Test Voice Output", use_container_width=True):
+        speak("SafeStep audio feedback system is active and ready.", bypass_cooldown=True)
+        st.sidebar.success("Voice test queued.")
+
+    if nav_choice == "🏠 Home Dashboard":
+        render_home_dashboard(engine, cfg)
+    elif nav_choice == "🎥 Live Navigation":
+        render_live_navigation(engine, cfg)
+    elif nav_choice == "🔤 OCR Reader":
+        render_ocr_reader(engine)
+    elif nav_choice == "💴 Currency Recognition":
+        render_currency_recognition(engine, cfg)
+    elif nav_choice == "📊 Dataset Explorer":
+        render_dataset_explorer()
+    elif nav_choice == "📈 Model Performance":
+        render_model_performance(engine)
+    elif nav_choice == "⚙️ Settings":
+        render_settings(engine, cfg)
+
+
+if __name__ == "__main__":
+    main()

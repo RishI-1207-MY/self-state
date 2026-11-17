@@ -1,0 +1,15 @@
+# Python bytecode & caches
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.venv/
+.venv_rpi/
+
+# Ultralytics label caches & intermediate epoch checkpoints
+*.cache
+models/*/runs/
+datasets/*/raw/
+
+# Pre-packaged tarball (regenerated via `python deployment/deploy_to_pi.py`)
+deployment/safestep_rpi_bundle.tar.gz
